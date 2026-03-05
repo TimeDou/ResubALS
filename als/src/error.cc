@@ -532,7 +532,7 @@ void VECBEEMan::EstimateErrorBoundForEachLAC(Simulator& miterSmlt, LACMan& lacMa
     CalcBoolDiffCut2Node(miterSmlt, topoNodes);
     CalcBoolDiffPo2NodeParallelly(miterSmlt, topoNodes);
 
-    cout << "estimating LACs' MED bounds" << endl;
+    cout << "estimating LACs' error bounds" << endl;
     int lacNum = lacMan.GetLacNum();
     int realThread = min(nThread, lacNum);
     assert(realThread > 0);
