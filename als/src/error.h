@@ -7,7 +7,7 @@
 
 
 enum class METR_TYPE{
-    ER, MED, MSE, MHD, SNR, MAXED, SELF
+    ER, MED, MSE, MHD, SNR, MAXED, MRED, PSNR, SELF
 };
 
 

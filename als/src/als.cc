@@ -31,11 +31,12 @@ void ALSOpt::Print() {
 }
 
 
-ALSMan::ALSMan(ALSOpt & opt): isSign(opt.isSign), enableFastErrEst(opt.enableFastErrEst), sourceSeed(opt.sourceSeed), seed(0), lacType(opt.lacType), distrType(opt.distrType), metrType(opt.metrType), nFrame(opt.nFrame), nFrame4ResubGen(opt.nFrame4ResubGen), maxCandResub(opt.maxCandResub), nThread(opt.nThread), maxLevelDiff(INT_MAX), round(0), errUppBound(opt.errUppBound), maxDelay(DBL_MAX), accNet(NetMan(opt.pNtk, true)), standCellPath(opt.standCellPath), outpPath(opt.outpPath) {
+ALSMan::ALSMan(ALSOpt & opt): isSign(opt.isSign), enableFastErrEst(opt.enableFastErrEst), sourceSeed(opt.sourceSeed), seed(0), lacType(opt.lacType), distrType(opt.distrType), metrType(opt.metrType), nFrame(opt.nFrame), nFrame4ResubGen(opt.nFrame4ResubGen), maxCandResub(opt.maxCandResub), nThread(opt.nThread), maxLevelDiff(INT_MAX), round(0), errUppBound(opt.errUppBound), outputNum(opt.outputNum), maxDelay(DBL_MAX), accNet(NetMan(opt.pNtk, true)), standCellPath(opt.standCellPath), outpPath(opt.outpPath) {
     if (accNet.GetNetType() == NET_TYPE::GATE) {
         cout << "convert gate netlist into AIG" << endl;
         accNet.Comm("st; compress2rs; logic; sop; ps;");
     }
+    accNet.setOutputNum(opt.outputNum);
     randGen.seed(sourceSeed);
 }
 
@@ -103,13 +104,13 @@ double ALSMan::ApplyTheBestLAC(NetMan & net) {
     lacMan.Gen012ResubLACsPro(net, nodes, seed, maxLevelDiff, nFrame4ResubGen, maxCandResub);
     cout << "#lacs = " << lacMan.GetLacNum() << endl;
 
-    // error estimation
-    const BigInt uppBound = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 8192;
-    BigInt backErrInt = (BigInt)(BigFlt(nFrame) * BigFlt(backErr)) - 1;
-    {// this block is for memory management
-    VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
-    vecbeeMan.BatchErrEstPro(accNet, net, lacMan, uppBound, enableFastErrEst, backErrInt);
-    }
+    // // error estimation
+    // const BigInt uppBound = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 8192;
+    // BigInt backErrInt = (BigInt)(BigFlt(nFrame) * BigFlt(backErr)) - 1;
+    // {// this block is for memory management
+    // VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
+    // vecbeeMan.BatchErrEstPro(accNet, net, lacMan, uppBound, enableFastErrEst, backErrInt);
+    // }
 
     // apply best LAC
     assert(lacType == LAC_TYPE::RESUB);
@@ -186,10 +187,11 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
         pMiterNet = BuildMiterWithYosys(accNet, net, miterId2AppId, appId2MiterId);
 
     // simulate
-    Simulator miterSmlt(*pMiterNet, seed, nFrame);
-    miterSmlt.InpUnifFast();
-    miterSmlt.Sim();
-    auto backErr = miterSmlt.GetError();
+    // Simulator miterSmlt(*pMiterNet, seed, nFrame);
+    // miterSmlt.InpUnifFast();
+    // miterSmlt.Sim();
+    // auto backErr = miterSmlt.GetError();
+    auto backErr = CalcErr(accNet, net, isSign, seed, nFrame, metrType, distrType);
     cout << "base " << metrType << " = " << backErr << endl;
     if (DoubleGreat(backErr, errUppBound)) {
         Eval(backNet, backErr, true);
@@ -197,13 +199,13 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
         return DBL_MAX;
     }
 
-    // error estimation
-    BigInt errUppBoundInt = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 1;
-    {// this block is for memory management
-    VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
-    // vecbeeMan.EstimateErrorBoundForEachLAC(accSmlt, appSmlt, lacMan, errUppBoundInt, enableFastErrEst);
-    vecbeeMan.EstimateErrorBoundForEachLAC(miterSmlt, lacMan, errUppBoundInt, enableFastErrEst, miterId2AppId, appId2MiterId);
-    }
+    // // error estimation
+    // BigInt errUppBoundInt = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 1;
+    // {// this block is for memory management
+    // VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
+    // // vecbeeMan.EstimateErrorBoundForEachLAC(accSmlt, appSmlt, lacMan, errUppBoundInt, enableFastErrEst);
+    // vecbeeMan.EstimateErrorBoundForEachLAC(miterSmlt, lacMan, errUppBoundInt, enableFastErrEst, miterId2AppId, appId2MiterId);
+    // }
 
     // collect promising LACs for each node
     BigInt errorMargin = (BigInt)(BigFlt(errUppBound - backErr) * BigFlt(nFrame));
@@ -1054,6 +1056,8 @@ double ALSMan::ComputeError(Simulator& accSmlt, NetMan& net) {
         err = accSmlt.GetErrRate(appSmlt);
     else if (metrType == METR_TYPE::MED)
         err = accSmlt.GetMeanErrDist(appSmlt, isSign);
+    else if (metrType == METR_TYPE::MSE)
+        err = accSmlt.GetMeanSquareErr(appSmlt, isSign);
     else
         assert(0);
     return err;
@@ -1066,6 +1070,8 @@ double ALSMan::ComputeError(Simulator& accSmlt, Simulator& appSmlt) {
         err = accSmlt.GetErrRate(appSmlt);
     else if (metrType == METR_TYPE::MED)
         err = accSmlt.GetMeanErrDist(appSmlt, isSign);
+    else if (metrType == METR_TYPE::MSE)
+        err = accSmlt.GetMeanSquareErr(appSmlt, isSign);
     else
         assert(0);
     return err;

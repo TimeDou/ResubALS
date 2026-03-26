@@ -47,6 +47,7 @@ public:
     double GetMeanSquareErr(const Simulator & oth_smlt, bool isSign, bool isCheck = false) const;
     double GetMeanHammDist(const Simulator & oth_smlt, bool isCheck = false) const;
     double GetSigNoiseRat(const Simulator & oth_smlt, bool isSign, bool isCheck = false) const;
+    double GetMeanAvgPerErr(const Simulator & oth_smlt, bool isSign, bool isCheck = false) const;
     double GetError() const;
     void CalcLocBoolDiff(abc::Abc_Obj_t * pObj, std::list <abc::Abc_Obj_t *> & disjCut, std::vector <abc::Abc_Obj_t *> & cutNtk, std::vector < BitVect > & bdCut2Node);
     void CalcLocPartDiff(abc::Abc_Obj_t * pObj, std::list <abc::Abc_Obj_t *> & disjCut, std::vector <abc::Abc_Obj_t *> & cutNtk, std::vector < std::vector <int8_t> > & pdCut2Node);

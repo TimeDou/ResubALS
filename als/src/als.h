@@ -21,6 +21,7 @@ struct ALSOpt {
     int nThread = 32;
     // int maxLevelDiff = INT_MAX;
     double errUppBound = 0.05;
+    int outputNum = 1;
     std::string outpPath = "./tmp";
     std::string standCellPath = "./input/standard-cell/nangate_45nm_typ.lib";
     abc::Abc_Ntk_t * pNtk = nullptr;
@@ -45,6 +46,7 @@ private:
     int maxLevelDiff;
     int round;
     double errUppBound;
+    int outputNum;
     // double errVariationTolerance;
     double maxDelay;
     NetMan accNet;

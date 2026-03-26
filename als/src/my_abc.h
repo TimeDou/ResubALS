@@ -84,7 +84,7 @@ using AbcObjSet = std::unordered_set<abc::Abc_Obj_t *>;
 // call ABC commands
 class AbcMan {
 private:
-    const ll LutInp = 6; 
+    const ll LutInp = 6;
 
 public:
     explicit AbcMan();
@@ -119,6 +119,7 @@ public:
     abc::Abc_Obj_t * GetTwinNode( abc::Abc_Obj_t * pNode );
     void LoadAlias();
 
+    int outputNum = 1;
     inline abc::Abc_Frame_t * GetAbcFame() const {return abc::Abc_FrameGetGlobalFrame();}
     inline abc::Abc_Ntk_t * GetNet() const {return abc::Abc_FrameReadNtk(GetAbcFame());}
     inline NET_TYPE GetNetType() const {return GetNetType(GetNet());}
@@ -126,6 +127,9 @@ public:
     inline double GetDelay() const {return GetDelay(GetNet());}
     inline bool IsLutNetw() const {return GetNetType() != NET_TYPE::GATE && Abc_NtkGetFaninMax(GetNet()) <= LutInp;}
     inline void SetMainNetw(abc::Abc_Ntk_t * pNtk) {assert(pNtk != nullptr); if (pNtk != GetNet()) Abc_FrameReplaceCurrentNetwork(GetAbcFame(), pNtk);}
+
+    inline void setOutputNum(int num) {outputNum = num;}
+    inline int getOutputNum() { return outputNum; }
 };
 
 
