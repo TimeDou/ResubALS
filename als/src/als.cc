@@ -104,13 +104,13 @@ double ALSMan::ApplyTheBestLAC(NetMan & net) {
     lacMan.Gen012ResubLACsPro(net, nodes, seed, maxLevelDiff, nFrame4ResubGen, maxCandResub);
     cout << "#lacs = " << lacMan.GetLacNum() << endl;
 
-    // // error estimation
-    // const BigInt uppBound = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 8192;
-    // BigInt backErrInt = (BigInt)(BigFlt(nFrame) * BigFlt(backErr)) - 1;
-    // {// this block is for memory management
-    // VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
-    // vecbeeMan.BatchErrEstPro(accNet, net, lacMan, uppBound, enableFastErrEst, backErrInt);
-    // }
+    // error estimation
+    const BigInt uppBound = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 8192;
+    BigInt backErrInt = (BigInt)(BigFlt(nFrame) * BigFlt(backErr)) - 1;
+    {// this block is for memory management
+    VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
+    vecbeeMan.BatchErrEstPro(accNet, net, lacMan, uppBound, enableFastErrEst, backErrInt);
+    }
 
     // apply best LAC
     assert(lacType == LAC_TYPE::RESUB);
@@ -120,8 +120,6 @@ double ALSMan::ApplyTheBestLAC(NetMan & net) {
     // get error
     double err = CalcErr(accNet, net, isSign, seed, nFrame, metrType, distrType);
     cout << "current " << metrType << " = " << err << endl;
-    if (metrType == METR_TYPE::MED)
-        cout << "NMED = " << (BigFlt)(err) / BigFlt((BigInt(1) << net.GetPoNum()) - 1) << endl;
 
     // check error estimation
     if (DoubleLess(err, errUppBound)) {
@@ -183,13 +181,19 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
         pMiterNet = BuildErrorRateMiter(accNet, net, miterId2AppId, appId2MiterId);
     else if (metrType == METR_TYPE::MED)
         pMiterNet = BuildErrorDistanceMiter(accNet, net, miterId2AppId, appId2MiterId);
+    else if (metrType == METR_TYPE::SNR)
+        pMiterNet = BuildErrorDistanceMiter(accNet, net, miterId2AppId, appId2MiterId);
+    else if (metrType == METR_TYPE::MSE)
+        pMiterNet = BuildErrorDistanceMiter(accNet, net, miterId2AppId, appId2MiterId);
+    else if (metrType == METR_TYPE::MAPE)
+        pMiterNet = BuildErrorDistanceMiter(accNet, net, miterId2AppId, appId2MiterId);
     else
         pMiterNet = BuildMiterWithYosys(accNet, net, miterId2AppId, appId2MiterId);
 
     // simulate
-    // Simulator miterSmlt(*pMiterNet, seed, nFrame);
-    // miterSmlt.InpUnifFast();
-    // miterSmlt.Sim();
+    Simulator miterSmlt(*pMiterNet, seed, nFrame);
+    miterSmlt.InpUnifFast();
+    miterSmlt.Sim();
     // auto backErr = miterSmlt.GetError();
     auto backErr = CalcErr(accNet, net, isSign, seed, nFrame, metrType, distrType);
     cout << "base " << metrType << " = " << backErr << endl;
@@ -229,8 +233,6 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
     // auto err = ComputeError(accSmlt, net);
     double err = CalcErr(accNet, net, isSign, seed, nFrame, metrType, distrType);
     cout << "current " << metrType << " = " << err << endl;
-    if (metrType == METR_TYPE::MED)
-        cout << "NMED = " << (BigFlt)(err) / BigFlt((BigInt(1) << net.GetPoNum()) - 1) << endl;
 
     // traditional logic synthesis
     ExactSimpl(net);

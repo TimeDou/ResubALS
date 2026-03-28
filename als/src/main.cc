@@ -24,7 +24,7 @@ parser CommPars(int argc, char * argv[]) {
     option.add<int>("maxCandResub", '\0', "max #candidate AppResubs", false, 100000);
     option.add<int>("nThread", '\0', "number of threads", false, 4);
     // option.add <int> ("maxLevelDiff", '\0', "maximum level difference, affecting the number of 2-resubs", false, 8);
-    option.add<int>("OutputNum", '\0', "number of output values", false, 1);
+    option.add<int>("outputNum", '\0', "number of output values", false, 1);
     option.add("enableFastErrEst", '\0', "when this option is enabled, the program performs faster approximate error estimation;\n\t\t\t\totherwise, the program performs slower accurate error estimation");
     option.add("enableMeasureMode", '\0', "when this option is enabled, the program measures the quality of the circuit specified by `appCirc' option;\n\t\t\t\totherwise, the program performs approximate logic synthesis");
     option.add <string> ("appCirc", '\0', "path to approximate circuit,\n\t\t\t\tthis option is only used in the case when the `enableMeasureMode' option is active ", false, "");
@@ -79,10 +79,14 @@ void ConfigureOptions(ALSOpt & alsOpt, string & accCirc, string & metrType, stri
         assert(errUppBoundHP < BigFlt(DBL_MAX));
         alsOpt.errUppBound = (double)(errUppBoundHP);
     }
+    else if (metrType == "MAPE")
+        alsOpt.metrType = METR_TYPE::MAPE;
     else if (metrType == "MSE")
         alsOpt.metrType = METR_TYPE::MSE;
     else if (metrType == "MHD")
         alsOpt.metrType = METR_TYPE::MHD;
+    else if (metrType == "SNR")
+        alsOpt.metrType = METR_TYPE::SNR;
     else if (metrType == "NMHD") {
         alsOpt.metrType = METR_TYPE::MHD;
         auto nPo = Abc_NtkPoNum(abcMan.GetNet());

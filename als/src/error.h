@@ -7,7 +7,7 @@
 
 
 enum class METR_TYPE{
-    ER, MED, MSE, MHD, SNR, MAXED, MRED, PSNR, SELF
+    ER, MED, MSE, MHD, SNR, MAXED, MAPE, SELF
 };
 
 
@@ -17,7 +17,7 @@ enum class DISTR_TYPE {
 
 
 static inline std::ostream & operator << (std::ostream & os, const METR_TYPE metrType) {
-    const std::string strs[7] = {"ER", "MED", "MSE", "MHD", "SNR", "MAXED", "SELF"};
+    const std::string strs[9] = {"ER", "MED", "MSE", "MHD", "SNR", "MAXED", "MAPE", "SELF"};
     os << strs[static_cast <ll> (metrType)];
     return os;
 }
@@ -54,6 +54,7 @@ public:
     double CalcMeanSquareErr(bool isSign);
     double CalcMeanHammDist();
     double CalcSigNoiseRat(bool isSign);
+    double CalcMeanAvgPerErr(bool isSign);
     ull CalcMaxErrDist(bool isSign);
     ull GET_MEM(abc::Abc_Ntk_t * pNtk1, abc::Abc_Ntk_t * pNtk2);
     ull NtkMiterComp(abc::Abc_Ntk_t * pNtk1, abc::Abc_Ntk_t * pNtk2);

@@ -71,6 +71,11 @@ double ErrMan::CalcSigNoiseRat(bool isSign) {
 }
 
 
+double ErrMan::CalcMeanAvgPerErr(bool isSign) {
+    InitForStatErr();
+    return pSmlt0->GetMeanAvgPerErr(*pSmlt1, isSign);
+}
+
 // double ErrMan::CalcSelfDefErr(bool isSign, const string & selfDefMetr) {
 //     InitForStatErr();
 //     return pSmlt0->GetSelfDefErr(*pSmlt1, isSign, selfDefMetr);
@@ -377,6 +382,8 @@ double CalcErr(NetMan & netMan0, NetMan & netMan1, bool isSign, unsigned seed, l
         return errMan.CalcMeanSquareErr(isSign);
     else if (metrType == METR_TYPE::MHD)
         return errMan.CalcMeanHammDist();
+    else if (metrType == METR_TYPE::MAPE)
+        return errMan.CalcMeanAvgPerErr(isSign);
     else if (metrType == METR_TYPE::SNR)
         return errMan.CalcSigNoiseRat(isSign);
     else if (metrType == METR_TYPE::MAXED)

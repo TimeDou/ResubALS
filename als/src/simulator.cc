@@ -640,9 +640,9 @@ double Simulator::GetSigNoiseRat(const Simulator & oth_smlt, bool isSign, bool i
             sumAcc2 += accOut * accOut;
         }
     }
-    if (sse != 0) {
-        auto rat = BigFlt(sumAcc2) / BigFlt(sse);
-        return double(BigFlt(10) * log10(rat));
+    if (sumAcc2 != 0) {
+        auto rat = BigFlt(sse) / BigFlt(sumAcc2);
+        return double(rat);
     }
     return numeric_limits <double>::max();
 }
