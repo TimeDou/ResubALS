@@ -161,7 +161,6 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
     // check, change seed, & backup network
     assert(lacType == LAC_TYPE::RESUB);
     assert(distrType == DISTR_TYPE::UNIF);
-    assert(isSign == false);
     seed = NewSeed();
     auto backNet = net;
     
@@ -203,13 +202,13 @@ double ALSMan::ApplyMultipleLACs(NetMan & net) {
         return DBL_MAX;
     }
 
-    // // error estimation
-    // BigInt errUppBoundInt = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 1;
-    // {// this block is for memory management
-    // VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
-    // // vecbeeMan.EstimateErrorBoundForEachLAC(accSmlt, appSmlt, lacMan, errUppBoundInt, enableFastErrEst);
-    // vecbeeMan.EstimateErrorBoundForEachLAC(miterSmlt, lacMan, errUppBoundInt, enableFastErrEst, miterId2AppId, appId2MiterId);
-    // }
+    // error estimation
+    BigInt errUppBoundInt = (BigInt)(BigFlt(nFrame) * BigFlt(errUppBound)) + 1;
+    {// this block is for memory management
+    VECBEEMan vecbeeMan(isSign, seed, nFrame, metrType, lacType, distrType, nThread);
+    // vecbeeMan.EstimateErrorBoundForEachLAC(accSmlt, appSmlt, lacMan, errUppBoundInt, enableFastErrEst);
+    vecbeeMan.EstimateErrorBoundForEachLAC(miterSmlt, lacMan, errUppBoundInt, enableFastErrEst, miterId2AppId, appId2MiterId);
+    }
 
     // collect promising LACs for each node
     BigInt errorMargin = (BigInt)(BigFlt(errUppBound - backErr) * BigFlt(nFrame));

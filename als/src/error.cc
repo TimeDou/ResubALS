@@ -5,6 +5,8 @@ using namespace std;
 using namespace abc;
 using namespace boost;
 
+static int tmp_output_num = 1;
+static bool tmp_isSign = false;
 
 ErrMan::ErrMan(NetMan & netMan0, NetMan & netMan1, unsigned _seed, ll n_frame, DISTR_TYPE distr_type):
     net0(netMan0), net1(netMan1), pSmlt0(nullptr), pSmlt1(nullptr), seed(_seed), nFrame(n_frame), distrType(distr_type) {
@@ -374,6 +376,8 @@ bool ErrMan::SATSolver(Abc_Ntk_t * pNtk) {
 
 double CalcErr(NetMan & netMan0, NetMan & netMan1, bool isSign, unsigned seed, ll nFrame, METR_TYPE metrType, DISTR_TYPE distrType) {
     ErrMan errMan(netMan0, netMan1, seed, nFrame, distrType);
+    tmp_output_num = netMan0.outputNum;
+    tmp_isSign = isSign;
     if (metrType == METR_TYPE::ER)
         return errMan.CalcErrRate();
     else if (metrType == METR_TYPE::MED)
@@ -653,9 +657,11 @@ void VECBEEMan::EstimateERBound(Simulator& accSmlt, Simulator& appSmlt, LACMan& 
         thread.join();
 }
 
-
+// @SJ: fixed
 static void EstSomeLACMEDBounds(Simulator& appSmlt, LACMan& lacMan, vector<vector<BitVect>>& bdPo2Nodes, timer::progress_display& pd, ll startIndex, ll endIndex) {
     int nPo = appSmlt.GetPoNum();
+    int bitsPerValue = nPo / tmp_output_num;
+    assert(bitsPerValue * tmp_output_num == nPo);
     for (ll lacId = startIndex; lacId < endIndex; ++lacId) {
         auto pLac = lacMan.GetLac(lacId);
         ll targId = pLac->GetTargId();
@@ -669,10 +675,21 @@ static void EstSomeLACMEDBounds(Simulator& appSmlt, LACMan& lacMan, vector<vecto
         auto isChanged = (*appSmlt.GetDat(targId)) ^ newValue;
         BigInt deltaMEDBound(0);
         for (int k = nPo - 1; k >= 0; --k) {
-            deltaMEDBound <<= 1;
             auto affectPoK = isChanged & bdPo2Nodes[k][targId];
-            deltaMEDBound += affectPoK.count();
+            size_t bitErrorCount = affectPoK.count();
+            int bitIdx = k % bitsPerValue;
+
+            if (tmp_isSign && bitIdx == bitsPerValue - 1)
+                deltaMEDBound -= bitErrorCount * (BigInt(1) << bitIdx);
+            else
+                deltaMEDBound += bitErrorCount * (BigInt(1) << bitIdx);
         }
+
+        // for (int k = nPo - 1; k >= 0; --k) {
+        //     deltaMEDBound <<= 1;
+        //     auto affectPoK = isChanged & bdPo2Nodes[k][targId];
+        //     deltaMEDBound += affectPoK.count();
+        // }
         pLac->SetErrPro(deltaMEDBound);
 
         // update progress
@@ -1250,10 +1267,12 @@ static BigInt GetValue(vector<BitVect> & dat, int iPatt, bool isSign, int msb) {
     return ret;
 }
 
-
+// @SJ: fixed
 static void CalcSomeLACNonERErrsNew(Simulator& appSmlt, LACMan& lacMan, vector<vector<BitVect> >& bdPo2Nodes, vector<BigInt>& YAcc, BigInt& runMin, timer::progress_display& pd, int startIndex, int endIndex, METR_TYPE metrType, bool& earlyStop, BigInt& backErrInt) {
     int nPo = appSmlt.GetPoNum();
     int nFrame = appSmlt.GetFrameNumb();
+    int bitsPerValue = nPo / tmp_output_num;
+    assert(bitsPerValue * tmp_output_num == nPo);
 
     for (int lacId = startIndex; lacId < endIndex; ++lacId) {
         // get LAC
@@ -1277,24 +1296,65 @@ static void CalcSomeLACNonERErrsNew(Simulator& appSmlt, LACMan& lacMan, vector<v
                 tempOutps[j] = *appSmlt.GetDat(poId) ^ (isChanged & bdPo2Nodes[j][targId]); 
             }
             // get error
-            if (metrType == METR_TYPE::MED) {
-                for (int iPatt = 0; iPatt < nFrame; ++iPatt) {
-                    auto YNew = GetValue(tempOutps, iPatt, false, nPo - 1);
-                    ser += abs(YNew - YAcc[iPatt]);
-                    if (ser > runMin)
+            for (int iPatt = 0; iPatt < nFrame; ++iPatt) {
+                BigInt accOut = YAcc[iPatt]; // Accurate output
+                BigInt appOut = GetValue(tempOutps, iPatt, false, nPo - 1);; // Approximate output
+
+                // Calculate error for each output value
+                for (int outputIdx = 0; outputIdx < tmp_output_num; ++outputIdx) {
+                    BigInt accValue = (accOut >> (outputIdx * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
+                    BigInt appValue = (appOut >> (outputIdx * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
+
+                    // If signed, adjust values for signed representation
+                    if (tmp_isSign) {
+                        BigInt signMask = BigInt(1) << (bitsPerValue - 1);
+                        if (accValue & signMask) {
+                            accValue -= (BigInt(1) << bitsPerValue);
+                        }
+                        if (appValue & signMask) {
+                            appValue -= (BigInt(1) << bitsPerValue);
+                        }
+                    }
+
+                    // Accumulate error based on metric type
+                    if (metrType == METR_TYPE::MED) {
+                        ser += abs(accValue - appValue);
+                    } else if (metrType == METR_TYPE::MSE) {
+                        ser += (accValue - appValue) * (accValue - appValue);
+                    } else {
+                        assert(0); // Invalid metric type
+                    }
+
+                    // Early stop if error exceeds current minimum
+                    if (ser > runMin) {
                         break;
+                    }
+                }
+
+                // Early stop if error exceeds current minimum
+                if (ser > runMin) {
+                    break;
                 }
             }
-            else if (metrType == METR_TYPE::MSE) {
-                for (int iPatt = 0; iPatt < nFrame; ++iPatt) {
-                    auto YNew = GetValue(tempOutps, iPatt, false, nPo - 1);
-                    ser += (YNew - YAcc[iPatt]) * (YNew - YAcc[iPatt]);
-                    if (ser > runMin)
-                        break;
-                }
-            }
-            else
-                assert(0);
+
+            // if (metrType == METR_TYPE::MED) {
+            //     for (int iPatt = 0; iPatt < nFrame; ++iPatt) {
+            //         auto YNew = GetValue(tempOutps, iPatt, false, nPo - 1);
+            //         ser += abs(YNew - YAcc[iPatt]);
+            //         if (ser > runMin)
+            //             break;
+            //     }
+            // }
+            // else if (metrType == METR_TYPE::MSE) {
+            //     for (int iPatt = 0; iPatt < nFrame; ++iPatt) {
+            //         auto YNew = GetValue(tempOutps, iPatt, false, nPo - 1);
+            //         ser += (YNew - YAcc[iPatt]) * (YNew - YAcc[iPatt]);
+            //         if (ser > runMin)
+            //             break;
+            //     }
+            // }
+            // else
+            //     assert(0);
         }
         
         // // early stop
@@ -1328,7 +1388,6 @@ void VECBEEMan::CalcLACNonERErrsNew(Simulator& accSmlt, Simulator& appSmlt, LACM
     assert((nFrame & 63) == 0);
     assert(uppBound >= 0);
     assert(lacType == LAC_TYPE::RESUB);
-    assert(!isSign);
     assert(appSmlt.GetPoNum() < 200);
 
     vector<BigInt> YAcc(nFrame, 0);

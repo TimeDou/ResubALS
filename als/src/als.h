@@ -9,7 +9,7 @@
 
 
 struct ALSOpt {
-    bool isSign = false;
+    bool isSign = true;
     bool enableFastErrEst = false;
     unsigned sourceSeed = 0;
     LAC_TYPE lacType = LAC_TYPE::RESUB;
