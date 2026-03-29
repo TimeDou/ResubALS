@@ -75,7 +75,7 @@ void ConfigureOptions(ALSOpt & alsOpt, string & accCirc, string & metrType, stri
     else if (metrType == "NMED") {
         alsOpt.metrType = METR_TYPE::MED;
         auto nPo = Abc_NtkPoNum(abcMan.GetNet());
-        auto errUppBoundHP = BigFlt(alsOpt.errUppBound) * BigFlt((BigInt(1) << nPo) - 1);
+        auto errUppBoundHP = BigFlt(alsOpt.errUppBound) * BigFlt((BigInt(1) << nPo) - 1) * BigFlt(alsOpt.outputNum);
         assert(errUppBoundHP < BigFlt(DBL_MAX));
         alsOpt.errUppBound = (double)(errUppBoundHP);
     }

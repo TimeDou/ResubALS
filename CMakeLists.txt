@@ -9,3 +9,4 @@ project(resubals)
 # Add sub directories
 add_subdirectory(abc)
 add_subdirectory(als)
+add_subdirectory(opt)
