@@ -26,11 +26,15 @@ int main(int argc, char * argv[]) {
     string inputCircuit = option.get <string> ("input");
     string standCellPath = option.get <string> ("standCell");
     // load standard cell
-    NetMan abcMan;
+    AbcMan abcMan;
     if (standCellPath != "")
         abcMan.ReadStandCell(standCellPath);
     abcMan.ReadNet(inputCircuit, false);
-    abcMan.CompileWithYosys(standCellPath);
+    NetMan netMan(abcMan.GetNet());
+    netMan.CompileWithYosys(standCellPath);
+    double recArea = netMan.GetArea();
+    double recDelay = netMan.GetDelay();
+    cout << "Optimization Result: area = " << recArea << ", delay = " << recDelay << endl;
 
     // stop abc engine
     GlobStopAbc();

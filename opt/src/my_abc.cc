@@ -1600,15 +1600,12 @@ void NetMan::CompileWithYosys(std::string& standCellPath) {
         auto yosysComm = "yosys -p \"" + yosysScript + "\" | grep Area";
         ExecSystComm(yosysComm);
     }
-
-    // read the circuit back
-    assert(isDupl == true);
     AbcMan::SetMainNetw(pNtk); // abc manage the memory of the old network
     AbcMan::Comm("r -m " + mapFileName);
     if (useGenlib)
-        AbcMan::Comm("unbuffer; ps;"); 
+        AbcMan::Comm("unbuffer; ps;");
     else
-        AbcMan::Comm("unbuffer; topo; stime;"); 
+        AbcMan::Comm("unbuffer; topo; stime;");
     pNtk = Abc_NtkDup(AbcMan::GetNet()); // NetMan manage the memory of the duplicated network
 }
 
