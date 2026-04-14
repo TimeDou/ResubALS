@@ -525,35 +525,15 @@ double Simulator::GetMeanErrDist(const Simulator & oth_smlt, bool isSign, bool i
         assert(IsPIOSame(oth_smlt));
         // assert(GetPoNum() <= 60);
     }
-    int outputNum_ = outputNum;
-    int totalBits = GetPoNum();
-    int bitsPerValue = totalBits / outputNum_;
-    assert(bitsPerValue * outputNum_ == totalBits);
     // const ll warnPoint = numeric_limits <ll>::max() * 0.8;
     BigInt sed(0);
     for (int i = 0; i < nFrame; ++i) {
-        BigInt accOut = GetOutp(i);
-        BigInt appOut = oth_smlt.GetOutp(i);
-        for (int j = 0; j < outputNum_; ++j) {
-            BigInt accValue = (accOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-            BigInt appValue = (appOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-
-            if (isSign) {
-                BigInt signMask = BigInt(1) << (bitsPerValue - 1);
-                if (accValue & signMask) {
-                    accValue -= (BigInt(1) << bitsPerValue);
-                }
-                if (appValue & signMask) {
-                    appValue -= (BigInt(1) << bitsPerValue);
-                }
-            }
-
-            sed += abs(accValue - appValue);
-            // assert(sed < warnPoint);
-        }
+        auto accOut = GetOutpPro(i, isSign);
+        auto appOut = oth_smlt.GetOutpPro(i, isSign);
+        sed += abs(accOut - appOut);
+        // assert(sed < warnPoint);
     }
-    BigInt caseNum = nFrame * outputNum_;
-    auto med = BigFlt(sed) / BigFlt(caseNum);
+    auto med = BigFlt(sed) / BigFlt(nFrame);
     assert(med < DBL_MAX);
     return (double)(med);
 }
@@ -564,34 +544,13 @@ double Simulator::GetMeanSquareErr(const Simulator & oth_smlt, bool isSign, bool
         assert(IsPIOSame(oth_smlt));
         assert(GetPoNum() < 200);
     }
-    int outputNum_ = outputNum;
-    int totalBits = GetPoNum();
-    int bitsPerValue = totalBits / outputNum_;
-    assert(bitsPerValue * outputNum_ == totalBits);
     BigInt sse = 0;
     for (ll i = 0; i < nFrame; ++i) {
-        BigInt accOut = GetOutp(i);
-        BigInt appOut = oth_smlt.GetOutp(i);
-        for (int j = 0; j < outputNum_; ++j)
-        {
-            BigInt accValue = (accOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-            BigInt appValue = (appOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-
-            if (isSign) {
-                BigInt signMask = BigInt(1) << (bitsPerValue - 1);
-                if (accValue & signMask) {
-                    accValue -= (BigInt(1) << bitsPerValue);
-                }
-                if (appValue & signMask) {
-                    appValue -= (BigInt(1) << bitsPerValue);
-                }
-            }
-
-            sse += (accOut - appOut) * (accOut - appOut);
-        }
+        BigInt accOut = GetOutpPro(i, isSign);
+        BigInt appOut = oth_smlt.GetOutpPro(i, isSign);
+        sse += (accOut - appOut) * (accOut - appOut);
     }
-    BigInt caseNum = nFrame * outputNum_;
-    return double(BigFlt(sse) / BigFlt(caseNum));
+    return double(BigFlt(sse) / BigFlt(nFrame));
 }
 
 
@@ -650,38 +609,22 @@ double Simulator::GetSigNoiseRat(const Simulator & oth_smlt, bool isSign, bool i
 double Simulator::GetMeanAvgPerErr(const Simulator & oth_smlt, bool isSign, bool isCheck) const {
     if (isCheck) {
         assert(IsPIOSame(oth_smlt));
-        assert(GetPoNum() < 200);
+        // assert(GetPoNum() <= 60);
     }
-    int outputNum_ = outputNum;
-    int totalBits = GetPoNum();
-    int bitsPerValue = totalBits / outputNum_;
-    assert(bitsPerValue * outputNum_ == totalBits);
+    // const ll warnPoint = numeric_limits <ll>::max() * 0.8;
     BigFlt ape = 0;
-    for (ll i = 0; i < nFrame; ++i) {
-        BigInt accOut = GetOutp(i);
-        BigInt appOut = oth_smlt.GetOutp(i);
-        for (int j = 0; j < outputNum_; ++j)
-        {
-            BigInt accValue = (accOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-            BigInt appValue = (appOut >> (j * bitsPerValue)) & ((BigInt(1) << bitsPerValue) - 1);
-
-            if (isSign) {
-                BigInt signMask = BigInt(1) << (bitsPerValue - 1);
-                if (accValue & signMask) {
-                    accValue -= (BigInt(1) << bitsPerValue);
-                }
-                if (appValue & signMask) {
-                    appValue -= (BigInt(1) << bitsPerValue);
-                }
-            }
-            if (accOut != 0)
-                ape += BigFlt(abs(accOut - appOut)) / BigFlt(accOut);
-            else
-                ape += 1.0;
-        }
+    for (int i = 0; i < nFrame; ++i) {
+        auto accOut = GetOutpPro(i, isSign);
+        auto appOut = oth_smlt.GetOutpPro(i, isSign);
+        if (accOut != 0)
+            ape += BigFlt(abs(accOut - appOut)) / BigFlt(accOut);
+        else
+            ape += 1.0;
+        // assert(sed < warnPoint);
     }
-    BigInt caseNum = nFrame * outputNum_;
-    return double(BigFlt(ape) / BigFlt(caseNum));
+    auto mred = BigFlt(sed) / BigFlt(nFrame);
+    assert(mred < DBL_MAX);
+    return (double)(mred);
 }
 
 double Simulator::GetError() const {
